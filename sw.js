@@ -1,7 +1,7 @@
 /* Minimal service worker: required by Chrome before it offers "Install".
    It keeps the launcher page and icons available offline; the treasury
    itself always loads live from Google. */
-var CACHE = 'treasury-launcher-v1';
+var CACHE = 'treasury-launcher-v2';
 var FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (event) {
