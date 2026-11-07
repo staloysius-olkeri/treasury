@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>St Aloysius Church Treasury</title>
+  <meta name="theme-color" content="#1e1b4b">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(160deg, #1e1b4b, #4338ca 60%, #7c3aed); color: #fff;
+    }
+    .card { width: 100%; max-width: 380px; text-align: center; }
+    .card img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+    h1 { font-size: 21px; margin: 18px 0 4px; }
+    p { font-size: 14px; line-height: 1.5; color: rgba(255,255,255,.82); margin: 0 0 18px; }
+    .btn {
+      display: block; width: 100%; padding: 14px; border-radius: 12px; border: 0; cursor: pointer;
+      font-size: 15px; font-weight: 600; text-decoration: none; margin-top: 10px;
+    }
+    .primary { background: #fff; color: #312e81; }
+    .ghost { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.3); }
+    .steps { text-align: left; font-size: 13px; color: rgba(255,255,255,.85); margin-top: 18px; line-height: 1.6; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="icon-512.png" alt="St Aloysius">
+    <h1>St Aloysius Church Treasury</h1>
+    <p id="msg">Opening the treasury…</p>
+
+    <a class="btn primary" id="open" href="#">Open the treasury</a>
+    <button class="btn ghost" id="install" hidden>Install on this phone</button>
+
+    <div class="steps" id="manual" hidden>
+      <strong>To install:</strong> tap Chrome's <strong>⋮</strong> menu, then
+      <strong>Install app</strong> or <strong>Add to home screen</strong>.
+      On iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.
+    </div>
+  </main>
+
+  <script>
+    /* ===== Paste the full /exec link of the treasury web app here ===== */
+    var TREASURY_URL = 'https://script.google.com/macros/s/AKfycbwiUae0sxR7QbyQuOFQ8h8KEf9Of1NSlOWqyFg1I6VSW_4FYU_BbnF94vWro1BwyJoe/exec';
+
+    var openLink = document.getElementById('open');
+    var installBtn = document.getElementById('install');
+    var msg = document.getElementById('msg');
+    openLink.href = TREASURY_URL;
+
+    var installed = window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* install offer just won't appear */ });
+    }
+
+    if (installed) {
+      // Opened from the home-screen icon: go straight to the treasury.
+      window.location.replace(TREASURY_URL);
+    } else {
+      // Opened in the browser: give people the chance to install first.
+      msg.textContent = 'Install the treasury on this phone for one-tap access, or open it now.';
+      document.getElementById('manual').hidden = false;
+
+      var deferred = null;
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        deferred = event;
+        installBtn.hidden = false;
+        document.getElementById('manual').hidden = true;
+      });
+      installBtn.addEventListener('click', function () {
+        if (!deferred) return;
+        deferred.prompt();
+        deferred.userChoice.finally(function () { deferred = null; installBtn.hidden = true; });
+      });
+      window.addEventListener('appinstalled', function () {
+        msg.textContent = 'Installed. Open it from your home screen.';
+      });
+    }
+  </script>
+</body>
+</html>
