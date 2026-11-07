@@ -5,72 +5,132 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>St Aloysius Church Treasury</title>
   <meta name="theme-color" content="#1e1b4b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Treasury">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>
-    :root { color-scheme: light; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(160deg, #1e1b4b, #4338ca 60%, #7c3aed); color: #fff;
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #1e1b4b; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fff; }
+    [hidden] { display: none !important; }
+
+    /* The treasury itself, edge to edge. */
+    #frame {
+      position: fixed; inset: 0; width: 100%; height: 100%; border: 0;
+      background: #f5f6fb; opacity: 0; transition: opacity .35s ease;
     }
+    #frame.ready { opacity: 1; }
+
+    /* Splash and welcome screens share one look. */
+    .screen {
+      position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+      padding-top: calc(24px + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(160deg, #1e1b4b, #4338ca 60%, #7c3aed);
+      transition: opacity .35s ease; z-index: 2;
+    }
+    .screen.fade { opacity: 0; pointer-events: none; }
     .card { width: 100%; max-width: 380px; text-align: center; }
     .card img { width: 112px; height: 112px; border-radius: 26px; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
     h1 { font-size: 21px; margin: 18px 0 4px; }
     p { font-size: 14px; line-height: 1.5; color: rgba(255,255,255,.82); margin: 0 0 18px; }
     .btn {
       display: block; width: 100%; padding: 14px; border-radius: 12px; border: 0; cursor: pointer;
-      font-size: 15px; font-weight: 600; text-decoration: none; margin-top: 10px;
+      font-size: 15px; font-weight: 600; text-decoration: none; margin-top: 10px; font-family: inherit;
     }
     .primary { background: #fff; color: #312e81; }
     .ghost { background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.3); }
     .steps { text-align: left; font-size: 13px; color: rgba(255,255,255,.85); margin-top: 18px; line-height: 1.6; }
-    [hidden] { display: none !important; }
+    .spinner {
+      width: 28px; height: 28px; margin: 22px auto 0; border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.25); border-top-color: #fff; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
   </style>
 </head>
 <body>
-  <main class="card">
-    <img src="icon-512.png" alt="St Aloysius">
-    <h1>St Aloysius Church Treasury</h1>
-    <p id="msg">Opening the treasury…</p>
-
-    <a class="btn primary" id="open" href="#">Open the treasury</a>
-    <button class="btn ghost" id="install" hidden>Install on this phone</button>
-
-    <div class="steps" id="manual" hidden>
-      <strong>To install:</strong> tap Chrome's <strong>⋮</strong> menu, then
-      <strong>Install app</strong> or <strong>Add to home screen</strong>.
-      On iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.
+  <!-- Shown while the treasury loads -->
+  <section class="screen" id="splash" hidden>
+    <div class="card">
+      <img src="icon-512.png" alt="">
+      <h1>St Aloysius Church Treasury</h1>
+      <p id="splashMsg">Opening the church books…</p>
+      <div class="spinner" id="spinner"></div>
+      <a class="btn ghost" id="fallback" hidden target="_blank" rel="noopener">Open in the browser instead</a>
     </div>
-  </main>
+  </section>
+
+  <!-- Shown when the page is opened in a browser tab rather than the installed app -->
+  <section class="screen" id="welcome" hidden>
+    <div class="card">
+      <img src="icon-512.png" alt="St Aloysius">
+      <h1>St Aloysius Church Treasury</h1>
+      <p>Install the treasury on this phone for one-tap access, or open it now.</p>
+      <button class="btn primary" id="install" hidden>Install on this phone</button>
+      <button class="btn ghost" id="openNow">Open the treasury</button>
+      <div class="steps" id="manual">
+        <strong>To install:</strong> tap Chrome's <strong>⋮</strong> menu, then
+        <strong>Install app</strong> or <strong>Add to home screen</strong>.
+        On iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.
+      </div>
+    </div>
+  </section>
+
+  <iframe id="frame" title="St Aloysius Church Treasury" hidden
+          allow="clipboard-write; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>
 
   <script>
     /* ===== Paste the full /exec link of the treasury web app here ===== */
     var TREASURY_URL = 'https://script.google.com/macros/s/AKfycbwiUae0sxR7QbyQuOFQ8h8KEf9Of1NSlOWqyFg1I6VSW_4FYU_BbnF94vWro1BwyJoe/exec';
 
-    var openLink = document.getElementById('open');
-    var installBtn = document.getElementById('install');
-    var msg = document.getElementById('msg');
-    openLink.href = TREASURY_URL;
+    var frame = document.getElementById('frame');
+    var splash = document.getElementById('splash');
+    var welcome = document.getElementById('welcome');
+    var fallback = document.getElementById('fallback');
+    fallback.href = TREASURY_URL;
 
-    var installed = window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true;
-
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(function () { /* install offer just won't appear */ });
     }
 
+    /** Load the treasury inside this page, full screen, behind a splash. */
+    function openTreasury() {
+      welcome.hidden = true;
+      splash.hidden = false;
+      frame.hidden = false;
+
+      var slow = setTimeout(function () {
+        document.getElementById('splashMsg').textContent = 'This is taking longer than usual. Check your connection.';
+        fallback.hidden = false;
+      }, 20000);
+
+      frame.addEventListener('load', function () {
+        clearTimeout(slow);
+        frame.classList.add('ready');
+        splash.classList.add('fade');
+        setTimeout(function () { splash.hidden = true; }, 400);
+      }, { once: true });
+
+      frame.src = TREASURY_URL;
+    }
+
+    var installed = window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: fullscreen)').matches ||
+      window.navigator.standalone === true;
+
     if (installed) {
-      // Opened from the home-screen icon: go straight to the treasury.
-      window.location.replace(TREASURY_URL);
+      openTreasury();
     } else {
-      // Opened in the browser: give people the chance to install first.
-      msg.textContent = 'Install the treasury on this phone for one-tap access, or open it now.';
-      document.getElementById('manual').hidden = false;
+      welcome.hidden = false;
+      document.getElementById('openNow').addEventListener('click', openTreasury);
 
       var deferred = null;
+      var installBtn = document.getElementById('install');
       window.addEventListener('beforeinstallprompt', function (event) {
         event.preventDefault();
         deferred = event;
@@ -83,7 +143,8 @@
         deferred.userChoice.finally(function () { deferred = null; installBtn.hidden = true; });
       });
       window.addEventListener('appinstalled', function () {
-        msg.textContent = 'Installed. Open it from your home screen.';
+        installBtn.hidden = true;
+        document.querySelector('#welcome p').textContent = 'Installed. Open it from your home screen.';
       });
     }
   </script>
